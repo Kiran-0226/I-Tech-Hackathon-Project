@@ -1,0 +1,38 @@
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:system-ui, -apple-system, sans-serif;
+}
+
+/* ===== Theme Colors ===== */
+
+:root{
+--bg:#ffffff;
+--text:#111111;
+--sidebar:#f0f4f9;
+--chat:#f0f4f9;
+--input:#f0f4f9;
+}
+
+body.dark{
+--bg:#0f172a;
+--text:#f1f5f9;
+--sidebar:#1e293b;
+--chat:#1e293b;
+--input:#1e293b;
+}
+
+/* ===== Global Styles ===== */
+
+body{
+background:var(--bg);
+color:var(--text);
+transition:background 0.3s ease,color 0.3s ease;
+}
+
+.app{
+display:flex;
+height:100vh;
+width:100%;
+}

@@ -1,0 +1,143 @@
+.sidebar{
+    min-height:100vh;
+    position:fixed;
+    left:0;
+    top:0;
+
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+
+    background:var(--sidebar);
+    padding:25px 15px;
+
+    transition:width 0.3s ease;
+    overflow:hidden;
+
+    z-index:100;
+}
+
+/* Sidebar width states */
+
+.sidebar.extended{
+    width:260px;
+}
+
+.sidebar.collapsed{
+    width:80px;
+}
+
+/* Icons */
+
+.sidebar img{
+    width:20px;
+    transition:filter 0.3s ease;
+}
+
+/* Dark mode icon visibility */
+
+body.dark .sidebar img{
+    filter:invert(1);
+}
+
+/* Keep profile image normal */
+
+body.dark .profile img{
+    filter:none;
+}
+
+/* Menu icon */
+
+.sidebar .menu{
+    margin-left:10px;
+    cursor:pointer;
+}
+
+/* New chat button */
+
+.sidebar .new-chat{
+    margin-top:50px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 15px;
+    background:var(--input);
+    border-radius:50px;
+    font-size:14px;
+    color:var(--text);
+    cursor:pointer;
+    transition:background 0.2s ease;
+}
+
+.sidebar .new-chat:hover{
+    background:rgba(0,0,0,0.08);
+}
+
+/* Recent chats */
+
+.sidebar .recent{
+    display:flex;
+    flex-direction:column;
+    overflow-y:auto;
+    max-height:60vh;
+}
+
+.sidebar .recent-title{
+    margin-top:30px;
+    margin-bottom:20px;
+    font-size:14px;
+    color:var(--text);
+}
+
+/* Chat item */
+
+.sidebar .recent-entry{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px;
+    border-radius:50px;
+    cursor:pointer;
+    transition:background 0.2s ease;
+}
+
+.sidebar .recent-entry:hover{
+    background:rgba(0,0,0,0.08);
+}
+
+.sidebar .recent-entry.active{
+    background:rgba(0,0,0,0.15);
+}
+
+/* Bottom section */
+
+.sidebar .bottom{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+}
+
+/* Profile section */
+
+.profile{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px;
+    margin-top:10px;
+    border-top:1px solid rgba(0,0,0,0.1);
+    cursor:pointer;
+}
+
+.profile img{
+    width:32px;
+    border-radius:50%;
+}
+
+/* Prevent text wrapping */
+
+.sidebar p{
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
