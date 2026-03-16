@@ -1,13 +1,33 @@
 import mongoose from "mongoose"
 
-const productSchema = new mongoose.Schema({
-  name: String,
-  age: Number,
-  location: String,
-  industry: String,
-  purchaseDate: Date,
-  price: Number
-})
+const productSchema = new mongoose.Schema(
+{
+  name: {
+    type: String,
+    required: true
+  },
+  age: {
+    type: Number
+  },
+  location: {
+    type: String
+  },
+  industry: {
+    type: String
+  },
+  purchaseDate: {
+    type: Date
+  },
+  price: {
+    type: Number
+  }
+},
+{
+  timestamps: true
+}
+)
 
-// IMPORTANT: specify exact collection name
-export default mongoose.model("Product", productSchema, "Products")
+// Use exact collection name
+const Product = mongoose.model("Product", productSchema, "Products")
+
+export default Product
