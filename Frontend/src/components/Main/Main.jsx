@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from "react";
 import "./Main.css";
 import { assets } from "../../assets/assets";
 import axios from "axios";
+
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 
 import { Pie, Bar, Line } from "react-chartjs-2";
+
 import {
   Chart as ChartJS,
   ArcElement,
@@ -21,6 +23,8 @@ import {
 
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+
+import DiagramRenderer from "../DiagramRenderer";
 
 ChartJS.register(
   ArcElement,
@@ -43,84 +47,64 @@ const Main = ({ chats, setChats, currentChat, extended }) => {
   const chat = chats.find((c) => c.id === currentChat);
   const messages = chat ? chat.messages : [];
 
-  /* AUTO SCROLL */
-
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  /* EXPORT PNG REPORT */
+  /* ================= PIN TO DASHBOARD ================= */
 
-  const downloadImage = async (msg, index) => {
+  const pinToDashboard = (msg) => {
 
-    const container = document.createElement("div");
+    const savedPins =
+      JSON.parse(localStorage.getItem("dashboardPins")) || [];
 
-    container.style.padding = "20px";
-    container.style.background = "white";
-    container.style.width = "700px";
-    container.style.fontFamily = "Arial";
+    savedPins.push(msg);
 
-    const chartCanvas = document.querySelector(`#chart-${index} canvas`);
+    localStorage.setItem("dashboardPins", JSON.stringify(savedPins));
 
-    const clonedCanvas = chartCanvas.cloneNode(true);
+    alert("📌 Pinned to Dashboard");
 
-    const title = document.createElement("h2");
-    title.innerText = "Analytics Report";
+  };
 
-    const date = document.createElement("p");
-    date.innerText = `Generated: ${new Date().toLocaleString()}`;
+  /* ================= DOWNLOAD PNG ================= */
 
-    container.appendChild(title);
-    container.appendChild(date);
-    container.appendChild(clonedCanvas);
+  const downloadPNG = async (index) => {
 
-    const table = document.createElement("table");
-    table.style.marginTop = "20px";
-    table.style.borderCollapse = "collapse";
+    const element = document.getElementById(`visual-${index}`);
+    if (!element) return;
 
-    const header = `
-      <tr>
-        <th style="border:1px solid #ccc;padding:6px">Category</th>
-        <th style="border:1px solid #ccc;padding:6px">Value</th>
-      </tr>
-    `;
+    const buttons = element.querySelector(".chart-actions");
+    if (buttons) buttons.style.display = "none";
 
-    const rows = msg.chart.labels
-      .map((l, i) => `
-        <tr>
-          <td style="border:1px solid #ccc;padding:6px">${l}</td>
-          <td style="border:1px solid #ccc;padding:6px">${msg.chart.values[i]}</td>
-        </tr>
-      `)
-      .join("");
+    const canvas = await html2canvas(element, {
+      backgroundColor: "#ffffff"
+    });
 
-    table.innerHTML = header + rows;
-
-    container.appendChild(table);
-
-    document.body.appendChild(container);
-
-    const canvas = await html2canvas(container);
     const imgData = canvas.toDataURL("image/png");
 
-    document.body.removeChild(container);
+    if (buttons) buttons.style.display = "flex";
 
     const link = document.createElement("a");
     link.href = imgData;
-    link.download = "analytics-report.png";
+    link.download = "visualization.png";
     link.click();
+
   };
 
-  /* EXPORT PDF REPORT */
+  /* ================= DOWNLOAD PDF ================= */
 
-  const downloadPDF = async (msg, index) => {
+  const downloadPDF = async (index) => {
 
-    const element = document.getElementById(`chart-${index}`);
+    const element = document.getElementById(`visual-${index}`);
+    if (!element) return;
+
     const buttons = element.querySelector(".chart-actions");
-
     if (buttons) buttons.style.display = "none";
 
-    const canvas = await html2canvas(element);
+    const canvas = await html2canvas(element, {
+      backgroundColor: "#ffffff"
+    });
+
     const imgData = canvas.toDataURL("image/png");
 
     if (buttons) buttons.style.display = "flex";
@@ -128,32 +112,32 @@ const Main = ({ chats, setChats, currentChat, extended }) => {
     const pdf = new jsPDF();
 
     pdf.setFontSize(16);
-    pdf.text("Analytics Report", 10, 10);
+    pdf.text("AI Generated Visualization", 10, 10);
 
-    pdf.setFontSize(10);
-    pdf.text(`Generated: ${new Date().toLocaleString()}`, 10, 18);
+    pdf.addImage(imgData, "PNG", 10, 20, 180, 120);
 
-    pdf.addImage(imgData, "PNG", 10, 30, 180, 100);
+    pdf.save("visualization.pdf");
 
-    pdf.save("analytics-report.pdf");
   };
+
+  /* ================= SEND PROMPT ================= */
 
   const sendPrompt = async () => {
 
-    if (!input.trim() || !currentChat || loading) return;
-
-    const promptText = input;
+    if (!input.trim() || loading) return;
 
     const userMessage = {
       role: "user",
-      text: promptText
+      text: input
     };
+
+    const promptText = input;
 
     setInput("");
     setLoading(true);
 
-    setChats((prev) =>
-      prev.map((chat) =>
+    setChats(prev =>
+      prev.map(chat =>
         chat.id === currentChat
           ? { ...chat, messages: [...chat.messages, userMessage] }
           : chat
@@ -175,17 +159,24 @@ const Main = ({ chats, setChats, currentChat, extended }) => {
           chart: res.data.chart
         };
 
+      } else if (res.data.diagram) {
+
+        aiMessage = {
+          role: "assistant",
+          diagram: res.data.diagram
+        };
+
       } else {
 
         aiMessage = {
           role: "assistant",
-          text: res?.data?.reply || "⚠️ No response from AI."
+          text: res.data.reply
         };
 
       }
 
-      setChats((prev) =>
-        prev.map((chat) =>
+      setChats(prev =>
+        prev.map(chat =>
           chat.id === currentChat
             ? { ...chat, messages: [...chat.messages, aiMessage] }
             : chat
@@ -194,51 +185,58 @@ const Main = ({ chats, setChats, currentChat, extended }) => {
 
     } catch (error) {
 
-      const errorMessage = {
+      console.error(error);
+
+      const errMsg = {
         role: "assistant",
         text: "⚠️ Error contacting AI server."
       };
 
-      setChats((prev) =>
-        prev.map((chat) =>
+      setChats(prev =>
+        prev.map(chat =>
           chat.id === currentChat
-            ? { ...chat, messages: [...chat.messages, errorMessage] }
+            ? { ...chat, messages: [...chat.messages, errMsg] }
             : chat
         )
       );
-
-      console.error(error);
     }
 
     setLoading(false);
   };
 
+  /* ================= CHART RENDER ================= */
+
   const renderChart = (msg) => {
 
-    const chartData = {
+    const colors = [
+      "#4b99ff",
+      "#ff5546",
+      "#4caf50",
+      "#ffb300",
+      "#9c27b0",
+      "#00acc1",
+      "#ff6f61",
+      "#26a69a"
+    ];
+
+    const data = {
       labels: msg.chart.labels,
       datasets: [
         {
           label: "Analytics",
           data: msg.chart.values,
-          backgroundColor: [
-            "#4b99ff",
-            "#ff5546",
-            "#4caf50",
-            "#ffb300",
-            "#9c27b0",
-            "#00acc1"
-          ]
+          backgroundColor: colors.slice(0, msg.chart.labels.length)
         }
       ]
     };
 
-    if (msg.chart.type === "bar") return <Bar data={chartData} />;
-    if (msg.chart.type === "line") return <Line data={chartData} />;
-    return <Pie data={chartData} />;
+    if (msg.chart.type === "bar") return <Bar data={data} />;
+    if (msg.chart.type === "line") return <Line data={data} />;
+    return <Pie data={data} />;
   };
 
   return (
+
     <div className={`main ${extended ? "extended" : "collapsed"}`}>
 
       <div className="main-container">
@@ -258,37 +256,33 @@ const Main = ({ chats, setChats, currentChat, extended }) => {
 
               <div key={index} className={`message ${msg.role}`}>
 
-                {msg.chart ? (
+                {msg.diagram ? (
 
-                  <div className="chart-container" id={`chart-${index}`}>
+                  <div className="diagram-container" id={`visual-${index}`}>
 
-                    {renderChart(msg)}
+                    <DiagramRenderer code={msg.diagram} />
 
                     <div className="chart-actions">
-
-                      <button onClick={() => downloadImage(msg, index)}>
-                        Download PNG
-                      </button>
-
-                      <button onClick={() => downloadPDF(msg, index)}>
-                        Download PDF
-                      </button>
-
+                      <button onClick={() => downloadPNG(index)}>PNG</button>
+                      <button onClick={() => downloadPDF(index)}>PDF</button>
+                      <button onClick={() => pinToDashboard(msg)}>📌 Pin</button>
                     </div>
 
                   </div>
 
-                ) : msg.text?.startsWith("http") ? (
+                ) : msg.chart ? (
 
-                  <img
-                    src={msg.text}
-                    alt="generated"
-                    style={{
-                      maxWidth: "400px",
-                      borderRadius: "12px",
-                      marginTop: "10px"
-                    }}
-                  />
+                  <div className="chart-container" id={`visual-${index}`}>
+
+                    {renderChart(msg)}
+
+                    <div className="chart-actions">
+                      <button onClick={() => downloadPNG(index)}>PNG</button>
+                      <button onClick={() => downloadPDF(index)}>PDF</button>
+                      <button onClick={() => pinToDashboard(msg)}>📌 Pin</button>
+                    </div>
+
+                  </div>
 
                 ) : (
 
@@ -301,7 +295,7 @@ const Main = ({ chats, setChats, currentChat, extended }) => {
 
                         return !inline ? (
                           <SyntaxHighlighter language={match?.[1] || "javascript"}>
-                            {String(children).replace(/\n$/, "")}
+                            {String(children)}
                           </SyntaxHighlighter>
                         ) : (
                           <code>{children}</code>
@@ -329,8 +323,6 @@ const Main = ({ chats, setChats, currentChat, extended }) => {
 
       </div>
 
-      {/* INPUT BAR */}
-
       <div className="main-bottom">
 
         <div className="search-box">
@@ -341,32 +333,26 @@ const Main = ({ chats, setChats, currentChat, extended }) => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              if (e.key === "Enter") {
                 e.preventDefault();
                 sendPrompt();
               }
             }}
           />
 
-          <div>
-
-            <img src={assets.gallery_icon} alt="gallery" />
-            <img src={assets.mic_icon} alt="mic" />
-
-            <img
-              src={assets.send_icon}
-              alt="send"
-              onClick={sendPrompt}
-              style={{ cursor: "pointer" }}
-            />
-
-          </div>
+          <img
+            src={assets.send_icon}
+            alt="send"
+            onClick={sendPrompt}
+            style={{ cursor: "pointer" }}
+          />
 
         </div>
 
       </div>
 
     </div>
+
   );
 };
 
