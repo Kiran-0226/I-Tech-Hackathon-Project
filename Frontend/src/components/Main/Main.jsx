@@ -260,7 +260,7 @@ const Main = ({ chats, setChats, currentChat, extended }) => {
 
                   <div className="diagram-container" id={`visual-${index}`}>
 
-                    <DiagramRenderer code={msg.diagram} />
+                    <DiagramRenderer diagram={msg.diagram} />
 
                     <div className="chart-actions">
                       <button onClick={() => downloadPNG(index)}>PNG</button>

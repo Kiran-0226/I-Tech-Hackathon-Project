@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react"
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
 import Sidebar from "./components/Sidebar/Sidebar"
 import Main from "./components/Main/Main"
+import Dashboard from "./components/Dashboard/Dashboard"
 import "./App.css"
 
 const App = () => {
@@ -33,28 +35,37 @@ const App = () => {
   }
 
   return (
-    <div className="app">
+    <Router>
+      <div className="app">
 
-      <Sidebar
-        chats={chats}
-        currentChat={currentChat}
-        setCurrentChat={setCurrentChat}
-        newChat={newChat}
-        extended={extended}
-        setExtended={setExtended}
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
-      />
+        <Sidebar
+          chats={chats}
+          currentChat={currentChat}
+          setCurrentChat={setCurrentChat}
+          newChat={newChat}
+          extended={extended}
+          setExtended={setExtended}
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+        />
 
-      <Main
-        chats={chats}
-        setChats={setChats}
-        currentChat={currentChat}
-        extended={extended}
-      />
+        <Routes>
+          <Route path="/" element={
+            <Main
+              chats={chats}
+              setChats={setChats}
+              currentChat={currentChat}
+              extended={extended}
+            />
+          } />
+          <Route path="/dashboard" element={
+            <Dashboard extended={extended} />
+          } />
+        </Routes>
 
-    </div>
+      </div>
+    </Router>
   )
 }
 
-export default App
+export default App

@@ -22,7 +22,7 @@ router.post("/", async (req, res) => {
     console.log("User Question:", message)
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-3-flash-preview"
+      model: "gemini-flash-latest"
     })
 
     // Fetch MongoDB data
@@ -35,39 +35,68 @@ router.post("/", async (req, res) => {
     }
 
     const prompt = `
-You are an intelligent AI assistant.
+You are an intelligent AI assistant. 
 
-You have two sources of knowledge:
-1. DATABASE records
-2. Your GENERAL KNOWLEDGE
+SOURCE DATA:
+DATABASE Records: ${dbText}
+YOUR KNOWLEDGE: Use your general knowledge for all other questions.
 
-DATABASE:
-${dbText}
+INSTRUCTIONS:
+1. If the user asks for a chart (bar, pie, line), you MUST include a JSON block in your response:
+   { "chart": { "type": "bar|pie|line", "labels": ["label1", "label2"], "values": [10, 20] } }
+2. If the user asks for a diagram or flowchart, you MUST include a JSON block in your response:
+   { "diagram": "mermaid syntax here" }
+3. You can provide a text explanation along with the JSON.
+4. If it's a general question, just answer normally.
 
-Instructions:
-- If the user's question relates to the database (name, age, location, industry, price), answer using the database.
-- If the question is general (history, politics, science, etc.), answer using your general knowledge.
-- If the user asks about database information that does not exist, respond: "No matching data found in database."
-
-USER QUESTION:
-${message}
-
-Answer clearly and concisely.
+USER QUESTION: ${message}
 `
 
     const result = await model.generateContent(prompt)
+    let reply = result.response.text().trim()
+    console.log("AI Reply received, length:", reply.length)
 
-    const reply = result.response.text()
+
+    try {
+      // Robust JSON extraction - find the first { } block that contains "chart" or "diagram"
+      const jsonRegex = /\{[\s\S]*?\}/g;
+      let match;
+      while ((match = jsonRegex.exec(reply)) !== null) {
+        try {
+          const jsonResponse = JSON.parse(match[0]);
+          if (jsonResponse.chart || jsonResponse.diagram) {
+            console.log("Extracted Visualization JSON:", jsonResponse);
+            return res.json(jsonResponse);
+          }
+        } catch (e) {
+          // Continue searching if this block isn't valid JSON
+        }
+      }
+
+      // 2. If it's a raw mermaid block
+      const mermaidMatch = reply.match(/```mermaid\n([\s\S]*?)```/);
+      if (mermaidMatch) {
+        return res.json({ diagram: mermaidMatch[1].trim() });
+      }
+
+    } catch (e) {
+      console.log("Could not parse visualization data from reply.");
+    }
 
     res.json({ reply })
 
+
+
+
   } catch (error) {
+
 
     console.error("Gemini Error:", error)
 
     if (error.status === 429) {
+      console.error("❌ Quota Exceeded (429):", error.message)
       return res.json({
-        reply: "AI request limit reached. Please try again later."
+        reply: "AI request limit reached. This is likely due to your Google AI Studio quota. Please try again in a few minutes or check your API key status."
       })
     }
 

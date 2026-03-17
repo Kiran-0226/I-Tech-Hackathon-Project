@@ -1,4 +1,5 @@
 import React from "react"
+import { Link, useLocation } from "react-router-dom"
 import "./Sidebar.css"
 import { assets } from "../../assets/assets"
 
@@ -12,6 +13,8 @@ const Sidebar = ({
   darkMode,
   setDarkMode
 }) => {
+
+  const location = useLocation();
 
   return (
 
@@ -29,10 +32,12 @@ const Sidebar = ({
         />
 
         {/* NEW CHAT BUTTON */}
+        <Link to="/" style={{ textDecoration: 'none' }}>
         <div className="new-chat" onClick={newChat}>
           <img src={assets.plus_icon} alt="new chat"/>
           {extended && <p>New Chat</p>}
         </div>
+        </Link>
 
         {/* CHAT HISTORY */}
         {extended && (
@@ -74,14 +79,16 @@ const Sidebar = ({
       {/* BOTTOM SECTION */}
       <div className="bottom">
 
+        <Link to="/dashboard" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <div className={`bottom-item recent-entry ${location.pathname === '/dashboard' ? 'active' : ''}`}>
+            <img src={assets.history_icon} alt="dashboard" />
+            {extended && <p>Dashboard</p>}
+          </div>
+        </Link>
+
         <div className="bottom-item recent-entry">
           <img src={assets.question_icon} alt="help" />
           {extended && <p>Help</p>}
-        </div>
-
-        <div className="bottom-item recent-entry">
-          <img src={assets.history_icon} alt="activity" />
-          {extended && <p>Activity</p>}
         </div>
 
         {/* DARK MODE BUTTON */}
@@ -112,4 +119,4 @@ const Sidebar = ({
 
 }
 
-export default Sidebar
+export default Sidebar
